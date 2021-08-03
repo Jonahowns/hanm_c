@@ -1,0 +1,1 @@
+ ./hanm cg12_nh.json cg12_rmsfs.json 0 100 0.5 3 3
