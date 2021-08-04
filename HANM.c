@@ -10,7 +10,8 @@
 
 #define MAX_ATOM 1000
 #define SIZE (sizeof(double))
-#define KBT 2.49434192
+//#define KBT 2.49434192
+// 300K * .0083145 KJ/(mol K)
 
 //typedef struct{
 //    char type[6];
@@ -143,7 +144,7 @@ int nma(int N, double *x, double *y, double *z, double **s,
         double *mass, double *sqrtmass, double **fc, double *fc_res,
         double **bond_fluc, double *bcal,
         double **H, double *lambda, double **v, double **cor,
-        gsl_matrix *m, gsl_vector *eval, gsl_matrix *evec, gsl_eigen_symmv_workspace *w){
+        gsl_matrix *m, gsl_vector *eval, gsl_matrix *evec, gsl_eigen_symmv_workspace *w, double *KBT){
 
     int i,j,k;
 
@@ -258,8 +259,10 @@ int main(int argc, char *argv[]){
     double k0=100;
     double cutoff=1.5; //nm?
     double factor=0.3;
+    double temp=300;  // Kelvin
+    double KBT=2.49434192;
     int mcycles,ncycles;
-    char *fcfile="fc.xvg";
+    char *fcfile="fc.xvg";   // KJ/(mol nm^2)
 
     int N;  //atom number
     double *x, *y, *z;  //coordinate vector
@@ -281,11 +284,12 @@ int main(int argc, char *argv[]){
     system("date");
 
     //command line parameters
-    if (argc!=7 && argc!=8 && argc!=9){
-        fprintf(stderr, "\n >> Usage: %s json_network_file json_rmsf_file k0 cutoff factor mcycles ncycles (fcfile)!\n", argv[0]);
+    if (argc!=9 && argc!=10){
+        fprintf(stderr, "\n >> Usage: %s json_network_file json_rmsf_file temp k0 cutoff factor mcycles ncycles (fcfile)!\n", argv[0]);
         fprintf(stderr,"\n Parameters are:");
         fprintf(stderr,"\n json_network_file  --> Contains two arrays, coordinates and masses");
         fprintf(stderr,"\n json_rmsf_file  --> Contains one array, the rmsf per particle");
+        fprintf(stderr,"\n temp      --> Start with this uniform force constant, leave it 0 to use\n             the optimal force constant of ANM");
         fprintf(stderr,"\n k0      --> Start with this uniform force constant, leave it 0 to use\n             the optimal force constant of ANM");
         fprintf(stderr,"\n cutoff  --> Atom pairs of distance within the cutoff will be connected\n             by a harmonic bond");
         fprintf(stderr,"\n factor  --> How large a restraint potential will be add in each cycle\n             we would use factor*3KBT*3/8pi^2*(Bcal-Bexp)/(Bcal*Bexp)");
@@ -303,13 +307,14 @@ int main(int argc, char *argv[]){
     //    pdbfile=argv[1];
     jsonnetfile=argv[1];
     jsonrmsffile=argv[2];
-    k0=atof(argv[3]);
-    cutoff=atof(argv[4]);
-    factor=atof(argv[5]);
-    mcycles=atoi(argv[6]);
-    ncycles=atoi(argv[7]);
-    if (argc== 9){
-        fcfile=argv[8];
+    temp = atof(argv[3])
+    k0=atof(argv[4]);
+    cutoff=atof(argv[5]);
+    factor=atof(argv[6]);
+    mcycles=atoi(argv[7]);
+    ncycles=atoi(argv[8]);
+    if (argc== 10){
+        fcfile=argv[9];
     }
 
 
@@ -367,10 +372,12 @@ int main(int argc, char *argv[]){
 
     for(i=0; i < N; i++){
         mass[i] = json_object_get_double(json_object_array_get_idx(masses, i));
+        sqrtmass[i]=sqrt(mass[i]);
         x[i] = json_object_get_double(json_object_array_get_idx(json_object_array_get_idx(coords, i), 0))/10.;
         y[i] = json_object_get_double(json_object_array_get_idx(json_object_array_get_idx(coords, i), 1))/10.;
         z[i] = json_object_get_double(json_object_array_get_idx(json_object_array_get_idx(coords, i), 2))/10.;
     }
+
 
 //    mass = json_object_get_array(masses);
 //    coordinates = json_object_get_array(coords);
@@ -452,8 +459,7 @@ int main(int argc, char *argv[]){
 
 
 
-    for(i=0;i<N;i++)
-        sqrtmass[i]=sqrt(mass[i]);
+
 
     fprintf(stdout,"\n >> END of file reading!\n");
     //return 0;
@@ -536,7 +542,7 @@ int main(int argc, char *argv[]){
     }
     /* if initial fc is given as 0, use following part to calculate it */
     else if(k0<1e-5){
-        nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res0,bond_fluc,bcal,H,lambda,v,cor,m,eval,evec,w);
+        nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res0,bond_fluc,bcal,H,lambda,v,cor,m,eval,evec,w,KBT);
         double tmp1=0.0;
         double tmp2=0.0;
         for(i=0;i<N;i++){
@@ -554,7 +560,7 @@ int main(int argc, char *argv[]){
 
     //loops to optimize force constant
     //calculate all quantities using current force constant
-    nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res0,bond_fluc,bcal,H,lambda,v,cor,m,eval,evec,w);
+    nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res0,bond_fluc,bcal,H,lambda,v,cor,m,eval,evec,w, KBT);
     sprintf(buff,"Bcal_0.xvg");
     writeBfactor(bcal,N,buff);
     sprintf(buff,"fc_0.xvg");
@@ -595,12 +601,12 @@ int main(int argc, char *argv[]){
             fprintf(stdout,"\n >> The Bfactors have not converged in %d mcycles!\n",i);
         //call nma routine and save bond fluctuation into bond_fluc0
         //this is used as standard fluctuation for inner loop of fluctuation matching
-        nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res,bond_fluc0,bcal,H,lambda,v,cor,m,eval,evec,w);
+        nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res,bond_fluc0,bcal,H,lambda,v,cor,m,eval,evec,w, KBT);
 
         //update fc by fluctuation matching
         for(j=1;j<=ncycles;j++){
             //calculate bond_fluc
-            nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res0,bond_fluc,bcal,H,lambda,v,cor,m,eval,evec,w);
+            nma(N,x,y,z,s,mass,sqrtmass,fc,fc_res0,bond_fluc,bcal,H,lambda,v,cor,m,eval,evec,w, KBT);
             //check convergency and update fc
             bconv_ncycle=1;
             //fprintf(stdout,"\n >> ncycle=%d\n>> \tk\tl\tfluc[kl]\tddx2\tratiox2\tfc[kl]",j);
