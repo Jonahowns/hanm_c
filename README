@@ -1,0 +1,43 @@
+Must install header files for libraries gsl and json-c
+
+On Ubuntu 20.04:
+    1. Download json-c and follow installation directions (cmake, make, make install)
+        git clone https://github.com/json-c/json-c.git
+        mkdir json-c-build
+        cd json-c-build
+        cmake ../json-c
+        make
+        sudo make install
+    2. Install gsl headers via the command line
+        sudo apt-get install libgsl23  # Try this first
+        sudo apt get install libgsl-dev  # Do this if compiling with the below command can't find gsl
+
+To compile: In this directory use the command to generate our hanm executable (obvi make sure to have gcc installed)
+    gcc HANM.c -o hanm -lgsl -lgslcblas -lm -ljson-c
+
+
+
+Running the Program:
+
+
+
+All parameters:
+
+json_network_file  --> Contains two arrays, coordinates and masses in json format  -> Use the Python Networks Python files to do this
+json_rmsf_file  --> Contains one array, the rmsf per particle -> The target RMSF for each particle, use the anm_parameterize script in oxpy
+temp      --> Start with this uniform force constant, leave it 0 to use the optimal force constant of ANM");
+k0      --> Start with this uniform force constant, leave it 0 to use\n             the optimal force constant of ANM");
+cutoff  --> Atom pairs of distance within the cutoff (nm) will be connected\n             by a harmonic bond");
+factor  --> How large a restraint potential will be add in each cycle we would use factor*3KBT*3/8pi^2*(Bcal-Bexp)/(Bcal*Bexp)");
+mcycles --> Number of outer cycles, updating B factors
+ncycles --> Number of Inner cycles, fluctuation matching
+outfile --> Output File Name, use a .json extension
+mthreshold_abs --> Convergence Criteria for Bfactors, default is 0.1
+nthreshold --> Convergence Criteria for Force Constants, default is 0.001
+fcfiles --> (Optional) Provide a force constant file to use values inside
+
+
+Calling the program:
+
+hanm json_network_file json_rmsf_file temp k0 cutoff factor mcycles ncycles outfile
+

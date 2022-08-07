@@ -1,1 +1,5 @@
- ./hanm cg12_nh.json cg12_rmsfs.json 300 0 100 0.5 3 3
+./hanm cg12_nh.json cg12_rmsfs.json 300 0 100 0.5 10 10 cg12_full.json
+
+./hanm cg90_nh.json cg90_rmsfs.json 300 0 16 0.5 25 10 cg90_full.json
+
+./hanm cg150_nh.json cg150_rmsfs.json 300 0 8 0.5 25 10 cg150_full.json
