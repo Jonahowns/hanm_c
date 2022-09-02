@@ -10,7 +10,7 @@ On Ubuntu 20.04:
         sudo make install
     2. Install gsl headers via the command line
         sudo apt-get install libgsl23  # Try this first
-        sudo apt get install libgsl-dev  # Do this if compiling with the below command can't find gsl
+        sudo apt-get install libgsl-dev  # Do this if compiling with the below command can't find gsl
 
 To compile: In this directory use the command to generate our hanm executable (obvi make sure to have gcc installed)
     gcc HANM.c -o hanm -lgsl -lgslcblas -lm -ljson-c
