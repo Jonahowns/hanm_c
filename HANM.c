@@ -73,7 +73,7 @@ int writeBfactor(double *bcal, int N, char *filename, double temp){
     return 0;
 }
 
-int writeFinalJson(char *filename, double *bcal, double *bexp, int N, double temp, struct json_object *masses, struct json_object *coords, double **fc){
+int writeFinalJson(char *filename, double *bcal, double *bexp, int N, double temp, struct json_object *masses, struct json_object *coords, double **fc, struct json_object *radii){
     FILE *fp2;
     int i, l = 0;
     if((fp2=fopen(filename,"w"))==NULL){
@@ -110,6 +110,7 @@ int writeFinalJson(char *filename, double *bcal, double *bexp, int N, double tem
     json_object_object_add(finalobj, "Bfactor (exp)", bexps);
     json_object_object_add(finalobj, "Masses (ox units)", masses);
     json_object_object_add(finalobj, "coordinates", coords);
+    json_object_object_add(finalobj, "radii", radii);
     json_object_object_add(finalobj, "temp", json_object_new_double(temp));
     json_object_object_add(finalobj, "force constant matrix (ox units)", scm);
 
@@ -325,6 +326,7 @@ int main(int argc, char *argv[]){
     int N;  //atom number
     double *x, *y, *z;  //coordinate vector
     double *mass,*sqrtmass;  //mass vector
+    double *radius_array; // radius vector
     double **s, **fc;    //distance matrix and force constant matrix
     double **H; //Hessian Matrix
     double *lambda; //eigen values
@@ -419,6 +421,7 @@ int main(int argc, char *argv[]){
     // file reading stuff (net file)
     struct json_object *masses;
     struct json_object *coords;
+    struct json_object *radii;
     struct json_object *parsed_json;
 
     int buffsize = 1024*1024;
@@ -436,6 +439,7 @@ int main(int argc, char *argv[]){
 
     json_object_object_get_ex(parsed_json, "simMasses", &masses);
     json_object_object_get_ex(parsed_json, "coordinates", &coords);
+    json_object_object_get_ex(parsed_json, "radii", &radii);
 
     N = json_object_array_length(masses);
 
@@ -444,6 +448,7 @@ int main(int argc, char *argv[]){
     z=(double *)malloc(SIZE*N);
     bexp=(double *)malloc(SIZE*N);
     mass=(double *)malloc(SIZE*N);
+    radius_array = (double *)malloc(SIZE*N);
     sqrtmass=(double *)malloc(SIZE*N);
 
     for(i=0; i < N; i++){
@@ -452,6 +457,7 @@ int main(int argc, char *argv[]){
         x[i] = json_object_get_double(json_object_array_get_idx(json_object_array_get_idx(coords, i), 0))/10.;  // A -> nm
         y[i] = json_object_get_double(json_object_array_get_idx(json_object_array_get_idx(coords, i), 1))/10.;  // A -> nm
         z[i] = json_object_get_double(json_object_array_get_idx(json_object_array_get_idx(coords, i), 2))/10.;  // A -> nm
+        //radius_array[i] = json_object_get_double(json_object_array_get_idx(radii, i));
     }
 
 
@@ -689,7 +695,7 @@ int main(int argc, char *argv[]){
     sprintf(buff,"fc_final.txt");
     writefc(fc,N,flag,buff);
 
-    writeFinalJson(outfile, bcal, bexp, N, temp, masses, coords, fc);
+    writeFinalJson(outfile, bcal, bexp, N, temp, masses, coords, fc, radii);
     //sprintf(buff,"cor_final.mtx");
     //writecor(cor,N,buff);
     //sprintf(buff,"eigval_final.xvg");
